@@ -27,7 +27,7 @@ export interface CliValues {
   until?: string;
   level?: string;
   serviceName?: string;
-  nodemethod?: string;
+  methodName?: string;
 
   // Service options
   param?: string[];
@@ -75,7 +75,7 @@ export const CLI_OPTIONS = {
   until: { type: "string" },
   level: { type: "string" },
   "service-name": { type: "string" },
-  nodemethod: { type: "string" },
+  "method-name": { type: "string" },
 
   // Service options
   param: { type: "string", multiple: true },
@@ -138,6 +138,10 @@ export function parseCli(argv: string[]): { values: CliValues; positionals: stri
   if (values["service-name"]) {
     mappedValues.serviceName = values["service-name"] as string;
     delete (mappedValues as Record<string, unknown>)["service-name"];
+  }
+  if (values["method-name"]) {
+    mappedValues.methodName = values["method-name"] as string;
+    delete (mappedValues as Record<string, unknown>)["method-name"];
   }
 
   return { values: mappedValues, positionals };

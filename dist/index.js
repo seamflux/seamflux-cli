@@ -39,7 +39,7 @@ var CLI_OPTIONS = {
   until: { type: "string" },
   level: { type: "string" },
   "service-name": { type: "string" },
-  nodemethod: { type: "string" },
+  "method-name": { type: "string" },
   // Service options
   param: { type: "string", multiple: true },
   body: { type: "string" },
@@ -94,6 +94,10 @@ function parseCli(argv) {
     mappedValues.serviceName = values["service-name"];
     delete mappedValues["service-name"];
   }
+  if (values["method-name"]) {
+    mappedValues.methodName = values["method-name"];
+    delete mappedValues["method-name"];
+  }
   return { values: mappedValues, positionals };
 }
 
@@ -140,7 +144,7 @@ var HELP_TREE = {
         description: "Run an existing execution with config"
       },
       logs: {
-        usage: "seamflux execution logs [--id <execution-id>] [--limit <n>]",
+        usage: "seamflux execution logs [--id <execution-id>] [--limit <n>] [--service-name <name>] [--method-name <method>]",
         description: "Get execution logs"
       },
       delete: {
@@ -366,7 +370,7 @@ var SeamFluxClient = class {
       until: params.until,
       level: params.level,
       nodename: params.serviceName,
-      nodemethod: params.nodemethod
+      nodemethod: params.methodName
     });
   }
   async deleteExecution(id) {
@@ -383,12 +387,8 @@ var SeamFluxClient = class {
     }
     return this.request("POST", "/api/service/query", body);
   }
-  async invokeService(serviceName, methodName, params) {
-    return this.request("POST", "/api/service/invoke", {
-      serviceName,
-      methodName,
-      ...params
-    });
+  async invokeService(node, method, params) {
+    return this.request("POST", `/api/service/invoke/${encodeURIComponent(node)}/${encodeURIComponent(method)}`, params);
   }
   // Connection APIs
   async listConnections(credentialType) {
@@ -769,14 +769,14 @@ async function cmdExecutionRun(client, opts) {
 }
 async function cmdExecutionLogs(client, opts) {
   const result = await client.getExecutionLogs({
-    executionId: opts.executionId,
+    executionId: opts.id,
     limit: opts.limit,
     afterSeq: opts.afterSeq,
     since: opts.since,
     until: opts.until,
     level: opts.level,
     serviceName: opts.serviceName,
-    nodemethod: opts.nodemethod
+    methodName: opts.methodName
   });
   const data = result.data;
   const logs = data?.["results"] || [];
@@ -797,9 +797,9 @@ async function cmdExecutionLogs(client, opts) {
     process.stdout.write(`[${timeStr}] ${level.padEnd(5)} ${node ? `(${node}) ` : ""}${message}
 `);
   }
-  if (opts.executionId) {
+  if (opts.id) {
     process.stdout.write(`
-View execution: https://app.seamflux.ai/execution/${opts.executionId}
+View execution: https://app.seamflux.ai/execution/${opts.id}
 `);
   }
 }
@@ -1009,7 +1009,7 @@ Found ${items.length} connection(s):
 // src/index.ts
 var _require = createRequire(import.meta.url);
 var CLI_VERSION = _require("../package.json").version;
-var GIT_HASH = true ? "dev" : "dev";
+var GIT_HASH = true ? "55eb752" : "dev";
 async function main() {
   const { values, positionals } = parseCli(process.argv.slice(2));
   if (values.version) {
@@ -1134,14 +1134,14 @@ async function handleExecutionCommand(client, action, v, json) {
       });
     case "logs":
       return await cmdExecutionLogs(client, {
-        executionId: v.id,
+        id: v.executionId,
         limit: v.limit,
         afterSeq: v.afterSeq,
         since: v.since,
         until: v.until,
         level: v.level,
         serviceName: v.serviceName,
-        nodemethod: v.nodemethod,
+        methodName: v.methodName,
         json
       });
     case "delete":

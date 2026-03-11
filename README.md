@@ -61,7 +61,7 @@ npx @seamflux/cli <command>
 |---------|-------------|
 | `seamflux service list` | List online services |
 | `seamflux service query --q <query>` | Semantic search services |
-| `seamflux service invoke <node> <method>` | Invoke a service method |
+| `seamflux service invoke <service> <method>` | Invoke a service method |
 
 ### Configuration
 
@@ -82,9 +82,6 @@ default_profile = "prod"
 api_key = "sf_xxxxxxxx"
 base_url = "https://app.seamflux.ai"
 
-[profiles.dev]
-api_key = "sf_yyyyyyyy"
-base_url = "https://dev.seamflux.ai"
 ```
 
 ### Configuration Priority

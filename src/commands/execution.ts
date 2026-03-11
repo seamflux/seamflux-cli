@@ -61,26 +61,26 @@ export async function cmdExecutionRun(
 export async function cmdExecutionLogs(
   client: SeamFluxClient,
   opts: {
-    executionId?: string;
+    id?: string;
     limit?: string;
     afterSeq?: string;
     since?: string;
     until?: string;
     level?: string;
     serviceName?: string;
-    nodemethod?: string;
+    methodName?: string;
     json: boolean;
   }
 ): Promise<void> {
   const result = await client.getExecutionLogs({
-    executionId: opts.executionId,
+    executionId: opts.id,
     limit: opts.limit,
     afterSeq: opts.afterSeq,
     since: opts.since,
     until: opts.until,
     level: opts.level,
     serviceName: opts.serviceName,
-    nodemethod: opts.nodemethod,
+    methodName: opts.methodName,
   });
 
   const data = result.data as Record<string, unknown> | undefined;
@@ -110,8 +110,8 @@ export async function cmdExecutionLogs(
     process.stdout.write(`[${timeStr}] ${level.padEnd(5)} ${node ? `(${node}) ` : ""}${message}\n`);
   }
 
-  if (opts.executionId) {
-    process.stdout.write(`\nView execution: https://app.seamflux.ai/execution/${opts.executionId}\n`);
+  if (opts.id) {
+    process.stdout.write(`\nView execution: https://app.seamflux.ai/execution/${opts.id}\n`);
   }
 }
 

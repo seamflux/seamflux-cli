@@ -195,14 +195,14 @@ async function handleExecutionCommand(
       });
     case "logs":
       return await cmdExecutionLogs(client, {
-        executionId: v.id as string | undefined,
+        id: v.executionId as string | undefined,
         limit: v.limit as string | undefined,
         afterSeq: v.afterSeq as string | undefined,
         since: v.since as string | undefined,
         until: v.until as string | undefined,
         level: v.level as string | undefined,
         serviceName: v.serviceName as string | undefined,
-        nodemethod: v.nodemethod as string | undefined,
+        methodName: v.methodName as string | undefined,
         json,
       });
     case "delete":
