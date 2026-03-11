@@ -67,7 +67,7 @@ These user requests should usually trigger this skill even if the user does not 
 | Run a workflow | `workflow execute --id <id>` (optional: `--config '{"key":"value"}'`). Confirm workflow ID before running. After start, use `execution list` and `execution logs --id <exec_id>` to monitor. |
 | List or inspect executions | `execution list`; for logs use `execution logs --id <id>`. |
 | Re-run an execution | `execution run --id <id> --config '{}'` (config required; use `{}` if no overrides). Confirm before running. |
-| Find a service / integration | `service query --q "<what user wants>"` (e.g. "send message", "okx order", "notion page"). Use `service list` to see all. If the user already named the service, narrow with `--service <name>`. |
+| Find a service / integration | `service query --query "<what user wants>"` (e.g. "send message", "okx order", "notion page"). Use `service list` to see all. If the user already named the service, narrow with `--service <name>`. |
 | Call a service method | `service invoke <serviceName> <method>` with params. Prefer `--param key=value` for simple args; use `--body '{"...":...}'` for nested JSON; use `--file <path>` for file input or `--stdin` when piping. Confirm service name, method, and params before invoking. |
 | Check connections | `connection list` or `connection list <credential-type>` to see connected accounts. When a service call needs a `credential` parameter, use the credential type to find saved connections first. |
 
@@ -107,7 +107,7 @@ seamflux workflow search --q "notification" --scope templates
 
 # Output as JSON
 seamflux workflow list --json
-seamflux workflow search --q "alert" --json
+seamflux workflow search --query "alert" --json
 ```
 
 ### Get and Run a Workflow
@@ -190,13 +190,13 @@ seamflux execution logs --id exec_xyz789
 seamflux service list
 
 # Search by description (semantic search)
-seamflux service query --q "send email"
+seamflux service query --query "send email"
 
 # Search within a specific service only
-seamflux service query --q "get price" --service binance
+seamflux service query --query "get price" --service binance
 
 # Output as JSON for scripting
-seamflux service query --q "weather" --json
+seamflux service query --query "weather" --json
 ```
 
 ### Invoke Services
@@ -242,25 +242,25 @@ seamflux service invoke telegram sendMessage --param credential="My Bot" --param
 
 ## Service Capability Guide
 
-Use this to narrow which services to look for before calling `service query --q "..."`. Map the user's goal to a capability family, then query with terms that match that family or the listed service names. The map is a hint to improve search; always confirm exact service and method via `service query` or `service list`.
+Use this to narrow which services to look for before calling `service query --query "..."`. Map the user's goal to a capability family, then query with terms that match that family or the listed service names. The map is a hint to improve search; always confirm exact service and method via `service query` or `service list`.
 
 | User intent / capability | Likely services (service names) | Example query |
 |--------------------------|------------------------------|---------------|
-| CEX spot/futures, exchange API | binance, okx, backpack, bybit, gate, bitget, coinbase | `service query --q "binance ticker"` or `"cex order"` |
-| DEX perpetuals | hyperliquid, based, lighter, paradex, aster, grvt, ethereal, nado | `service query --q "perpetual"` or service name |
-| DeFi swap/liquidity | o1exchange, liquidityHub | `service query --q "swap"` |
-| Sui DeFi / swap / lending | bluefin, cetus, sevenK, momentum, scallop, alphaLend, navi | `service query --q "sui swap"` or `"lending"` |
-| Notifications, social, messaging | sendMail, telegram, discord, twitter | `service query --q "send message"` or `"telegram"` |
-| On-chain data or operations | chainKit | `service query --q "onchain"` or `"chainKit"` |
-| Charts | quickChart | `service query --q "chart"` |
-| Prediction / forecasting | polymarket, opinion | `service query --q "prediction"` |
-| AI analysis | ai | `service query --q "ai analysis"` |
-| Market data (aggregated) | marketData | `service query --q "market data"` |
-| Office, docs, DB, collaboration | notion, gmail, google-sheets, slack, supabase | `service query --q "notion"` or `"slack"` |
-| Webhook, human-in-the-loop | base, humanInTheLoop | `service query --q "webhook"` or `"human"` |
-| NFT market | opensea | `service query --q "nft"` or `"opensea"` |
+| CEX spot/futures, exchange API | binance, okx, backpack, bybit, gate, bitget, coinbase | `service query --query "binance ticker"` or `"cex order"` |
+| DEX perpetuals | hyperliquid, based, lighter, paradex, aster, grvt, ethereal, nado | `service query --query "perpetual"` or service name |
+| DeFi swap/liquidity | o1exchange, liquidityHub | `service query --query "swap"` |
+| Sui DeFi / swap / lending | bluefin, cetus, sevenK, momentum, scallop, alphaLend, navi | `service query --query "sui swap"` or `"lending"` |
+| Notifications, social, messaging | sendMail, telegram, discord, twitter | `service query --query "send message"` or `"telegram"` |
+| On-chain data or operations | chainKit | `service query --query "onchain"` or `"chainKit"` |
+| Charts | quickChart | `service query --query "chart"` |
+| Prediction / forecasting | polymarket, opinion | `service query --query "prediction"` |
+| AI analysis | ai | `service query --query "ai analysis"` |
+| Market data (aggregated) | marketData | `service query --query "market data"` |
+| Office, docs, DB, collaboration | notion, gmail, google-sheets, slack, supabase | `service query --query "notion"` or `"slack"` |
+| Webhook, human-in-the-loop | base, humanInTheLoop | `service query --query "webhook"` or `"human"` |
+| NFT market | opensea | `service query --query "nft"` or `"opensea"` |
 
-- If the user's goal fits none of these, use `service query --q "<user description>"` or `service list` and pick from results.
+- If the user's goal fits none of these, use `service query --query "<user description>"` or `service list` and pick from results.
 - After narrowing, always resolve exact `service` and `method` via `service query` or docs before invoking.
 
 ## Parameter and Communication Guidelines
@@ -276,7 +276,7 @@ Use this to narrow which services to look for before calling `service query --q 
 |------|-----|----------------------|
 | **Workflow** | `workflow list`, `workflow get --id <id>`, `workflow search --q <query>` | `workflow delete --id <id>`, `workflow execute --id <id>`, `workflow generate --requirement "<text>"` |
 | **Execution** | `execution list`, `execution logs --id <id>` | `execution run --id <id> --config '{}'`, `execution delete --id <id>` |
-| **Service** | `service list`, `service query --q <query> [--service <name>]` | `service invoke <service> <method>` with `--param`, `--body`, `--file`, or `--stdin` |
+| **Service** | `service list`, `service query --query <query> [--service <name>]` | `service invoke <service> <method>` with `--param`, `--body`, `--file`, or `--stdin` |
 | **Connection** | `connection list` or `connection list <credential-type>` | — |
 | **Config** | `config show` | `config init`, `config set <key> <value>` |
 
@@ -286,7 +286,7 @@ Global options: `--json` for JSON output; `--api-key`, `--base-url` to override 
 
 - **Execute and monitor** — `workflow search --q "..."` or `workflow list` → choose ID → `workflow execute --id <id>` → `execution list` → `execution logs --id <exec_id>`.
 - **Generate and run** — `workflow generate --requirement "..."` → then `workflow execute --id <id>` and monitor with execution logs.
-- **One-off integration call** — `service query --q "..."` → `service invoke <service> <method>` with appropriate params. For targeted searches, use `service query --q "get price" --service binance` to search only within a specific service.
+- **One-off integration call** — `service query --query "..."` → `service invoke <service> <method>` with appropriate params. For targeted searches, use `service query --query "get price" --service binance` to search only within a specific service.
 - **Cross-service outcome** — If the user says something like "place an order on OKX and save to Notion", first use the Service Capability Guide to identify likely services, then use `service query` to confirm exact service/methods, and only then decide whether this should stay a direct service call or become a generated workflow.
 - **Credential-backed service call** — If the params require `credential`, run `connection list <type>` first → if one match exists, use its name directly → if multiple matches exist, ask the user to choose → invoke with `credential: "<name>"`. Example: `connection list telegram` returns "My Bot", then `service invoke telegram sendMessage --param credential="My Bot" --param text="Hello"`.
 - **Check connection** — `connection list` or `connection list <type>` before assuming an integration is available.
