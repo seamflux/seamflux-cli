@@ -29,6 +29,14 @@ metadata:
 
 Use this skill when the user wants to **build or run an automation**, **run or monitor a workflow**, **use a known SeamFlux-backed integration** (e.g. OKX, Binance, Notion, Telegram, Slack, Google Sheets, Supabase), or **check whether a connection is set up**. This skill should also trigger for cross-service requests such as "place an order on OKX and save it to Notion" even if the user does not mention SeamFlux explicitly. All authenticated actions require the `seamflux` CLI and valid API credentials.
 
+## Pre-flight Checks
+
+Every time before running any `seamflux` command, follow these steps in order. Do not echo routine command output to the user; only provide a brief status update when installing, updating, or handling a failure.
+
+1. **Confirm installed** — Run `which seamflux` (on Windows: `where seamflux`). If not found, install with `npm install -g @seamflux/cli` and report briefly (e.g. "Installing SeamFlux CLI…" / "Installed." or "Install failed: …").
+2. **Ensure credentials** (before any authenticated command) — Run `seamflux config show`. If it errors or shows no API key: stop, tell the user to run `seamflux config init` locally, and wait before retrying. Do not ask for, accept, or write API keys from chat.
+3. **401 errors** — Do not retry. Tell the user the key may be invalid or expired and to update `~/.seamflux/config.toml` locally; do not paste credentials in chat. After they confirm, run `seamflux config show` then retry.
+
 ## When to Use This Skill
 
 Apply this skill when the user intent matches any of the following:
@@ -50,12 +58,6 @@ These user requests should usually trigger this skill even if the user does not 
 - "Create an automation that writes trade data to Google Sheets."
 - "Send a Slack message after a market event."
 - "Store workflow output in Supabase."
-
-## Prerequisites
-
-1. **Install the CLI** (if not present): `npm install -g @seamflux/cli`
-2. **Ensure credentials** — Before any authenticated command, run `seamflux config show`. If it errors or shows no API key: stop, tell the user to run `seamflux config init` locally, and wait before retrying. Do not ask for, accept, or write API keys from chat.
-3. **401 errors** — Do not retry. Tell the user the key may be invalid or expired and to update `~/.seamflux/config.toml` locally; do not paste credentials in chat. After they confirm, run `seamflux config show` then retry.
 
 ## Core User Intents and How to Fulfill Them
 

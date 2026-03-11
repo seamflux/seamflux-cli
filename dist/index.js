@@ -1004,7 +1004,7 @@ Found ${items.length} connection(s):
 // src/index.ts
 var _require = createRequire(import.meta.url);
 var CLI_VERSION = _require("../package.json").version;
-var GIT_HASH = true ? "16c9323" : "dev";
+var GIT_HASH = true ? "a79841e" : "dev";
 async function main() {
   const { values, positionals } = parseCli(process.argv.slice(2));
   if (values.version) {

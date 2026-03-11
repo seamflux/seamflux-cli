@@ -17,6 +17,12 @@ Or use directly with npx:
 npx @seamflux/cli <command>
 ```
 
+Or add as a skill for AI agents:
+
+```bash
+npx skills add seamflux/seamflux-cli
+```
+
 ## Quick Start
 
 1. **Initialize configuration:**
