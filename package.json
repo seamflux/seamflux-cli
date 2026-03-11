@@ -1,0 +1,39 @@
+{
+  "name": "@seamflux/cli",
+  "version": "0.1.0",
+  "description": "SeamFlux CLI - Command line tool for seamflux.ai",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/seamflux/seamflux-cli.git"
+  },
+  "homepage": "https://github.com/seamflux/seamflux-cli#readme",
+  "bugs": "https://github.com/seamflux/seamflux-cli/issues",
+  "main": "dist/index.js",
+  "bin": {
+    "seamflux": "dist/index.js",
+    "sf": "dist/index.js"
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "dev": "tsup --watch",
+    "test": "node --import tsx/esm --test test/*.test.ts"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": ["seamflux", "cli", "workflow", "automation"],
+  "dependencies": {
+    "smol-toml": "^1.3.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}
