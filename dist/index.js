@@ -38,15 +38,14 @@ var CLI_OPTIONS = {
   since: { type: "string" },
   until: { type: "string" },
   level: { type: "string" },
-  nodename: { type: "string" },
-  nodemethod: { type: "string" },
+  service: { type: "string" },
+  method: { type: "string" },
   // Service options
   param: { type: "string", multiple: true },
   body: { type: "string" },
   file: { type: "string" },
   stdin: { type: "boolean", default: false },
   interactive: { type: "boolean", short: "i", default: false },
-  service: { type: "string" },
   // Config options
   force: { type: "boolean", default: false },
   lang: { type: "string" },
@@ -136,7 +135,7 @@ var HELP_TREE = {
         description: "Run an existing execution with config"
       },
       logs: {
-        usage: "seamflux execution logs [--id <execution-id>] [--limit <n>] [--nodename <name>] [--nodemethod <method>]",
+        usage: "seamflux execution logs [--id <execution-id>] [--limit <n>] [--service <name>] [--method <method>]",
         description: "Get execution logs"
       },
       delete: {
@@ -1005,7 +1004,7 @@ Found ${items.length} connection(s):
 // src/index.ts
 var _require = createRequire(import.meta.url);
 var CLI_VERSION = _require("../package.json").version;
-var GIT_HASH = true ? "b540a0e" : "dev";
+var GIT_HASH = true ? "16c9323" : "dev";
 async function main() {
   const { values, positionals } = parseCli(process.argv.slice(2));
   if (values.version) {
@@ -1136,8 +1135,8 @@ async function handleExecutionCommand(client, action, v, json) {
         since: v.since,
         until: v.until,
         level: v.level,
-        nodename: v.nodename,
-        nodemethod: v.nodemethod,
+        nodename: v.service,
+        nodemethod: v.method,
         json
       });
     case "delete":

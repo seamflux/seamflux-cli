@@ -201,8 +201,8 @@ async function handleExecutionCommand(
         since: v.since as string | undefined,
         until: v.until as string | undefined,
         level: v.level as string | undefined,
-        nodename: v.nodename as string | undefined,
-        nodemethod: v.nodemethod as string | undefined,
+        nodename: v.service as string | undefined,
+        nodemethod: v.method as string | undefined,
         json,
       });
     case "delete":

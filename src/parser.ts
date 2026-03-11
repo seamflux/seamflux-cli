@@ -26,8 +26,8 @@ export interface CliValues {
   since?: string;
   until?: string;
   level?: string;
-  nodename?: string;
-  nodemethod?: string;
+  service?: string;
+  method?: string;
 
   // Service options
   param?: string[];
@@ -74,8 +74,8 @@ export const CLI_OPTIONS = {
   since: { type: "string" },
   until: { type: "string" },
   level: { type: "string" },
-  nodename: { type: "string" },
-  nodemethod: { type: "string" },
+  service: { type: "string" },
+  method: { type: "string" },
 
   // Service options
   param: { type: "string", multiple: true },
@@ -83,7 +83,6 @@ export const CLI_OPTIONS = {
   file: { type: "string" },
   stdin: { type: "boolean", default: false },
   interactive: { type: "boolean", short: "i", default: false },
-  service: { type: "string" },
 
   // Config options
   force: { type: "boolean", default: false },

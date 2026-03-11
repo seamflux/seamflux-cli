@@ -57,7 +57,7 @@ const HELP_TREE: HelpTree = {
         description: "Run an existing execution with config",
       },
       logs: {
-        usage: "seamflux execution logs [--id <execution-id>] [--limit <n>] [--nodename <name>] [--nodemethod <method>]",
+        usage: "seamflux execution logs [--id <execution-id>] [--limit <n>] [--service <name>] [--method <method>]",
         description: "Get execution logs",
       },
       delete: {
