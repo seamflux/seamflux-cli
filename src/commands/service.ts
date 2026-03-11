@@ -39,14 +39,14 @@ export async function cmdServiceList(
 
 export async function cmdServiceQuery(
   client: SeamFluxClient,
-  opts: { q: string; k?: string; service?: string; json: boolean }
+  opts: { query: string; k?: string; service?: string; json: boolean }
 ): Promise<void> {
-  let where: string | Record<string, unknown> | undefined;
+  let where: Record<string, unknown> | undefined;
   if (opts.service) {
     where = { service: opts.service };
   }
   const result = await client.queryServices(
-    opts.q,
+    opts.query,
     opts.k ? parseInt(opts.k, 10) : undefined,
     where
   );
@@ -60,7 +60,7 @@ export async function cmdServiceQuery(
   const items = (data?.["results"] || data || []) as Record<string, unknown>[];
 
   if (items.length === 0) {
-    process.stdout.write(`(no services found for "${opts.q}")\n`);
+    process.stdout.write(`(no services found for "${opts.query}")\n`);
     return;
   }
 

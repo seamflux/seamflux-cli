@@ -12,7 +12,7 @@ export interface CliValues {
   // Workflow options
   id?: string;
   scope?: string;
-  q?: string;
+  query?: string;
   username?: string;
   slug?: string;
   locale?: string;
@@ -26,8 +26,8 @@ export interface CliValues {
   since?: string;
   until?: string;
   level?: string;
-  serviceName?: string;
-  methodName?: string;
+  nodename?: string;
+  nodemethod?: string;
 
   // Service options
   param?: string[];
@@ -60,7 +60,7 @@ export const CLI_OPTIONS = {
   // Workflow options
   id: { type: "string" },
   scope: { type: "string" },
-  q: { type: "string" },
+  query: { type: "string" },
   username: { type: "string" },
   slug: { type: "string" },
   locale: { type: "string" },
@@ -74,8 +74,8 @@ export const CLI_OPTIONS = {
   since: { type: "string" },
   until: { type: "string" },
   level: { type: "string" },
-  "service-name": { type: "string" },
-  "method-name": { type: "string" },
+  nodename: { type: "string" },
+  nodemethod: { type: "string" },
 
   // Service options
   param: { type: "string", multiple: true },
@@ -135,14 +135,7 @@ export function parseCli(argv: string[]): { values: CliValues; positionals: stri
     mappedValues.relatedTo = values["related-to"] as string;
     delete (mappedValues as Record<string, unknown>)["related-to"];
   }
-  if (values["service-name"]) {
-    mappedValues.serviceName = values["service-name"] as string;
-    delete (mappedValues as Record<string, unknown>)["service-name"];
-  }
-  if (values["method-name"]) {
-    mappedValues.methodName = values["method-name"] as string;
-    delete (mappedValues as Record<string, unknown>)["method-name"];
-  }
+
 
   return { values: mappedValues, positionals };
 }

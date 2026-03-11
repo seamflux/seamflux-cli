@@ -57,7 +57,7 @@ const HELP_TREE: HelpTree = {
         description: "Run an existing execution with config",
       },
       logs: {
-        usage: "seamflux execution logs [--id <execution-id>] [--limit <n>] [--service-name <name>] [--method-name <method>]",
+        usage: "seamflux execution logs [--id <execution-id>] [--limit <n>] [--nodename <name>] [--nodemethod <method>]",
         description: "Get execution logs",
       },
       delete: {
@@ -75,7 +75,7 @@ const HELP_TREE: HelpTree = {
         description: "List all available services",
       },
       query: {
-        usage: "seamflux service query --q <query> [--service <name>] [--k <n>]",
+        usage: "seamflux service query --query <query> [--service <name>] [--k <n>]",
         description: "Search services by description, optionally filter by service name",
       },
       invoke: {

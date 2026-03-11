@@ -201,8 +201,8 @@ async function handleExecutionCommand(
         since: v.since as string | undefined,
         until: v.until as string | undefined,
         level: v.level as string | undefined,
-        serviceName: v.serviceName as string | undefined,
-        methodName: v.methodName as string | undefined,
+        nodename: v.nodename as string | undefined,
+        nodemethod: v.nodemethod as string | undefined,
         json,
       });
     case "delete":
@@ -224,9 +224,9 @@ async function handleServiceCommand(
     case "list":
       return await cmdServiceList(client, { json });
     case "query":
-      if (!v.q) throw new Error("--q (query) is required");
+      if (!v.query) throw new Error("--query is required");
       return await cmdServiceQuery(client, {
-        q: v.q as string,
+        query: v.query as string,
         k: v.k as string | undefined,
         service: v.service as string | undefined,
         json,

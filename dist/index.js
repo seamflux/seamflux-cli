@@ -25,7 +25,7 @@ var CLI_OPTIONS = {
   // Workflow options
   id: { type: "string" },
   scope: { type: "string" },
-  q: { type: "string" },
+  query: { type: "string" },
   username: { type: "string" },
   slug: { type: "string" },
   locale: { type: "string" },
@@ -38,8 +38,8 @@ var CLI_OPTIONS = {
   since: { type: "string" },
   until: { type: "string" },
   level: { type: "string" },
-  "service-name": { type: "string" },
-  "method-name": { type: "string" },
+  nodename: { type: "string" },
+  nodemethod: { type: "string" },
   // Service options
   param: { type: "string", multiple: true },
   body: { type: "string" },
@@ -90,14 +90,6 @@ function parseCli(argv) {
     mappedValues.relatedTo = values["related-to"];
     delete mappedValues["related-to"];
   }
-  if (values["service-name"]) {
-    mappedValues.serviceName = values["service-name"];
-    delete mappedValues["service-name"];
-  }
-  if (values["method-name"]) {
-    mappedValues.methodName = values["method-name"];
-    delete mappedValues["method-name"];
-  }
   return { values: mappedValues, positionals };
 }
 
@@ -144,7 +136,7 @@ var HELP_TREE = {
         description: "Run an existing execution with config"
       },
       logs: {
-        usage: "seamflux execution logs [--id <execution-id>] [--limit <n>] [--service-name <name>] [--method-name <method>]",
+        usage: "seamflux execution logs [--id <execution-id>] [--limit <n>] [--nodename <name>] [--nodemethod <method>]",
         description: "Get execution logs"
       },
       delete: {
@@ -161,7 +153,7 @@ var HELP_TREE = {
         description: "List all available services"
       },
       query: {
-        usage: "seamflux service query --q <query> [--service <name>] [--k <n>]",
+        usage: "seamflux service query --query <query> [--service <name>] [--k <n>]",
         description: "Search services by description, optionally filter by service name"
       },
       invoke: {
@@ -369,8 +361,8 @@ var SeamFluxClient = class {
       since: params.since,
       until: params.until,
       level: params.level,
-      nodename: params.serviceName,
-      nodemethod: params.methodName
+      nodename: params.nodename,
+      nodemethod: params.nodemethod
     });
   }
   async deleteExecution(id) {
@@ -387,8 +379,12 @@ var SeamFluxClient = class {
     }
     return this.request("POST", "/api/service/query", body);
   }
-  async invokeService(node, method, params) {
-    return this.request("POST", `/api/service/invoke/${encodeURIComponent(node)}/${encodeURIComponent(method)}`, params);
+  async invokeService(serviceName, methodName, params) {
+    return this.request("POST", "/api/service/invoke", {
+      serviceName,
+      methodName,
+      ...params
+    });
   }
   // Connection APIs
   async listConnections(credentialType) {
@@ -775,8 +771,8 @@ async function cmdExecutionLogs(client, opts) {
     since: opts.since,
     until: opts.until,
     level: opts.level,
-    serviceName: opts.serviceName,
-    methodName: opts.methodName
+    nodename: opts.nodename,
+    nodemethod: opts.nodemethod
   });
   const data = result.data;
   const logs = data?.["results"] || [];
@@ -840,7 +836,7 @@ async function cmdServiceQuery(client, opts) {
     where = { service: opts.service };
   }
   const result = await client.queryServices(
-    opts.q,
+    opts.query,
     opts.k ? parseInt(opts.k, 10) : void 0,
     where
   );
@@ -851,7 +847,7 @@ async function cmdServiceQuery(client, opts) {
   const data = result.data;
   const items = data?.["results"] || data || [];
   if (items.length === 0) {
-    process.stdout.write(`(no services found for "${opts.q}")
+    process.stdout.write(`(no services found for "${opts.query}")
 `);
     return;
   }
@@ -1009,7 +1005,7 @@ Found ${items.length} connection(s):
 // src/index.ts
 var _require = createRequire(import.meta.url);
 var CLI_VERSION = _require("../package.json").version;
-var GIT_HASH = true ? "55eb752" : "dev";
+var GIT_HASH = true ? "b540a0e" : "dev";
 async function main() {
   const { values, positionals } = parseCli(process.argv.slice(2));
   if (values.version) {
@@ -1140,8 +1136,8 @@ async function handleExecutionCommand(client, action, v, json) {
         since: v.since,
         until: v.until,
         level: v.level,
-        serviceName: v.serviceName,
-        methodName: v.methodName,
+        nodename: v.nodename,
+        nodemethod: v.nodemethod,
         json
       });
     case "delete":
@@ -1156,9 +1152,9 @@ async function handleServiceCommand(client, action, rest, v, json) {
     case "list":
       return await cmdServiceList(client, { json });
     case "query":
-      if (!v.q) throw new Error("--q (query) is required");
+      if (!v.query) throw new Error("--query is required");
       return await cmdServiceQuery(client, {
-        q: v.q,
+        query: v.query,
         k: v.k,
         service: v.service,
         json

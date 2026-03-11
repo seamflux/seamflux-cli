@@ -42,7 +42,7 @@ npx @seamflux/cli <command>
 |---------|-------------|
 | `seamflux workflow list` | List all your workflows |
 | `seamflux workflow get --id <id>` | Get workflow details |
-| `seamflux workflow search --q <query>` | Search workflows |
+| `seamflux workflow search --query <query>` | Search workflows |
 | `seamflux workflow delete --id <id>` | Delete a workflow |
 | `seamflux workflow execute --id <id>` | Execute a workflow |
 
@@ -60,7 +60,7 @@ npx @seamflux/cli <command>
 | Command | Description |
 |---------|-------------|
 | `seamflux service list` | List online services |
-| `seamflux service query --q <query>` | Semantic search services |
+| `seamflux service query --query <query>` | Semantic search services |
 | `seamflux service invoke <service> <method>` | Invoke a service method |
 
 ### Configuration

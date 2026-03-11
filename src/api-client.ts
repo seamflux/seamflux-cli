@@ -128,8 +128,8 @@ export class SeamFluxClient {
     since?: string;
     until?: string;
     level?: string;
-    serviceName?: string;
-    methodName?: string;
+    nodename?: string;
+    nodemethod?: string;
   }): Promise<ApiResponse> {
     return this.request("GET", "/api/execution/logs", undefined, {
       executionId: params.executionId,
@@ -138,8 +138,8 @@ export class SeamFluxClient {
       since: params.since,
       until: params.until,
       level: params.level,
-      nodename: params.serviceName,
-      nodemethod: params.methodName,
+      nodename: params.nodename,
+      nodemethod: params.nodemethod,
     });
   }
 
@@ -152,7 +152,7 @@ export class SeamFluxClient {
     return this.request("GET", "/api/service/list");
   }
 
-  async queryServices(query: string, k?: number, where?: string | Record<string, unknown>): Promise<ApiResponse> {
+  async queryServices(query: string, k?: number, where?: Record<string, unknown>): Promise<ApiResponse> {
     const body: Record<string, unknown> = { query, k };
     if (where !== undefined) {
       body.where = where;
@@ -161,11 +161,15 @@ export class SeamFluxClient {
   }
 
   async invokeService(
-    node: string,
-    method: string,
+    serviceName: string,
+    methodName: string,
     params?: Record<string, unknown>
   ): Promise<ApiResponse> {
-    return this.request("POST", `/api/service/invoke/${encodeURIComponent(node)}/${encodeURIComponent(method)}`, params);
+    return this.request("POST", "/api/service/invoke", {
+      serviceName,
+      methodName,
+      ...params,
+    });
   }
 
   // Connection APIs

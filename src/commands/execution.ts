@@ -67,8 +67,8 @@ export async function cmdExecutionLogs(
     since?: string;
     until?: string;
     level?: string;
-    serviceName?: string;
-    methodName?: string;
+    nodename?: string;
+    nodemethod?: string;
     json: boolean;
   }
 ): Promise<void> {
@@ -79,8 +79,8 @@ export async function cmdExecutionLogs(
     since: opts.since,
     until: opts.until,
     level: opts.level,
-    serviceName: opts.serviceName,
-    methodName: opts.methodName,
+    nodename: opts.nodename,
+    nodemethod: opts.nodemethod,
   });
 
   const data = result.data as Record<string, unknown> | undefined;
