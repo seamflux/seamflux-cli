@@ -80,7 +80,8 @@ const HELP_TREE: HelpTree = {
       },
       invoke: {
         usage:
-          "seamflux service invoke <node> <method> [options]\n" +
+          "seamflux service invoke <service> <method> [options]\n" +
+          "    Shortcut: seamflux <service> <method> [options]\n" +
           "    Options:\n" +
           "      -p, --param <k=v>    Simple parameters (AI-friendly)\n" +
           "      -b, --body '<json>'  JSON request body\n" +
@@ -113,6 +114,26 @@ const HELP_TREE: HelpTree = {
     },
   },
 
+  script: {
+    description: "Local workflow scripts (download, list, run with Node.js; no API key)",
+    commands: {
+      download: {
+        usage: "seamflux script download --slug <slug> [--output <dir>] [--base-url <url>]",
+        description: "Download a workflow script package (source.js + config.json) by slug",
+      },
+      list: {
+        usage: "seamflux script list [--dir <dir>]",
+        description: "List downloaded workflow scripts",
+      },
+      run: {
+        usage:
+          "seamflux script run <slug|path> [--config <path>] [--key=value ...]\n" +
+          "    Runs node source.js; uses local config.json or --config; pass-through args for script",
+        description: "Run a downloaded workflow script locally with Node.js",
+      },
+    },
+  },
+
   connection: {
     description: "Manage connections (credentials)",
     commands: {
@@ -128,6 +149,7 @@ function printGlobalHelp(): void {
   const lines: string[] = [
     "",
     "Usage: seamflux [options] <module> <command> [args...]",
+    "       seamflux [options] <service> [method] [args...]",
     "",
     "Global Options:",
     "  --api-key <key>      API Key (or set SEAMFLUX_API_KEY env)",
@@ -147,10 +169,18 @@ function printGlobalHelp(): void {
 
   lines.push(
     "",
+    "Service Shortcut (direct invocation):",
+    "  seamflux <service>            List all methods of a service",
+    "  seamflux <service> <method>   Invoke a service method directly",
+    "",
     "Examples:",
     "  seamflux workflow list",
     "  seamflux workflow execute --id wf_xxx",
+    "  seamflux script download --slug my-workflow",
+    "  seamflux script run my-workflow",
     "  seamflux service invoke binance getTicker -p symbol=BTC/USDT",
+    "  seamflux binance getTicker -p symbol=BTC/USDT    # shortcut",
+    "  seamflux binance                                 # list binance methods",
     "  seamflux execution logs --id exec_xxx",
     "",
     `Config: ${getConfigPath()}`,

@@ -13,6 +13,7 @@ export interface CliValues {
   id?: string;
   scope?: string;
   query?: string;
+  q?: string;
   username?: string;
   slug?: string;
   locale?: string;
@@ -44,6 +45,11 @@ export interface CliValues {
   // Workflow generate options
   requirement?: string;
 
+  // Script options
+  output?: string;
+  dir?: string;
+  config?: string;
+
   // Misc
   [key: string]: unknown;
 }
@@ -61,6 +67,7 @@ export const CLI_OPTIONS = {
   id: { type: "string" },
   scope: { type: "string" },
   query: { type: "string" },
+  q: { type: "string" },
   username: { type: "string" },
   slug: { type: "string" },
   locale: { type: "string" },
@@ -90,6 +97,11 @@ export const CLI_OPTIONS = {
 
   // Workflow generate options
   requirement: { type: "string" },
+
+  // Script options
+  output: { type: "string" },
+  dir: { type: "string" },
+  config: { type: "string" },
 } as const;
 
 export function parseCli(argv: string[]): { values: CliValues; positionals: string[] } {

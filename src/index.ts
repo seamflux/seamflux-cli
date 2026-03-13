@@ -34,12 +34,20 @@ import {
 import {
   cmdConnectionList,
 } from "./commands/connection.js";
+import {
+  cmdScriptDownload,
+  cmdScriptList,
+  cmdScriptRun,
+} from "./commands/script.js";
 
 const _require = createRequire(import.meta.url);
 const CLI_VERSION = (_require("../package.json") as { version: string }).version;
 const GIT_HASH: string = typeof __GIT_HASH__ !== "undefined" ? __GIT_HASH__ : "dev";
 
 export { printHelp };
+
+// Known top-level modules (for routing service shortcuts)
+const KNOWN_MODULES = new Set(["config", "script", "workflow", "execution", "service", "connection"]);
 
 // ---------------------------------------------------------------------------
 // Main entry point
@@ -65,6 +73,66 @@ async function main(): Promise<void> {
   const v = values;
   const json = v.json ?? false;
 
+  // Service shortcut: seamflux <service> [method] [options]
+  // If first positional is not a known module, treat it as a service name
+  if (!KNOWN_MODULES.has(module)) {
+    const serviceName = module;
+    const methodName = action;
+    
+    // Initialize API client
+    const loadOptions: LoadConfigOptions = {
+      profile: v.profile,
+      apiKey: v.apiKey,
+      baseUrl: v.baseUrl,
+    };
+
+    let client: SeamFluxClient;
+    try {
+      const config = await loadConfig(loadOptions);
+      client = new SeamFluxClient(config);
+    } catch (err) {
+      if (err instanceof Error) {
+        printError(err.message);
+      } else {
+        printError("Failed to load configuration");
+      }
+      return;
+    }
+
+    try {
+      if (methodName) {
+        // seamflux <service> <method> [options] -> invoke service method
+        return await cmdServiceInvoke(client, serviceName, methodName, {
+          params: v.param as string[] | undefined,
+          body: v.body as string | undefined,
+          file: v.file as string | undefined,
+          stdin: v.stdin as boolean,
+          json,
+        });
+      } else {
+        // seamflux <service> -> query service methods
+        return await cmdServiceQuery(client, {
+          query: "*",
+          service: serviceName,
+          json,
+        });
+      }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        printError(`${err.message} (code: ${err.code})`);
+        if (err.traceId) {
+          process.stderr.write(`  Trace ID: ${err.traceId}\n`);
+        }
+      } else if (err instanceof Error) {
+        printError(err.message);
+      } else {
+        printError("An unknown error occurred");
+      }
+      process.exitCode = 1;
+    }
+    return;
+  }
+
   // Config commands (don't need API client)
   if (module === "config") {
     switch (action) {
@@ -79,6 +147,21 @@ async function main(): Promise<void> {
       default:
         printError(`Unknown config command: ${action}`);
         return;
+    }
+  }
+
+  // Script commands (no API key: download is public URL, list/run are local)
+  if (module === "script") {
+    try {
+      return await handleScriptCommand(action, rest, v, json);
+    } catch (err) {
+      if (err instanceof Error) {
+        printError(err.message);
+      } else {
+        printError("An unknown error occurred");
+      }
+      process.exitCode = 1;
+      return;
     }
   }
 
@@ -195,7 +278,7 @@ async function handleExecutionCommand(
       });
     case "logs":
       return await cmdExecutionLogs(client, {
-        id: v.executionId as string | undefined,
+        id: v.id as string | undefined,
         limit: v.limit as string | undefined,
         afterSeq: v.afterSeq as string | undefined,
         since: v.since as string | undefined,
@@ -232,11 +315,11 @@ async function handleServiceCommand(
         json,
       });
     case "invoke": {
-      const [node, method] = rest;
-      if (!node || !method) {
-        throw new Error("Node and method are required. Usage: seamflux service invoke <node> <method>");
+      const [service, method] = rest;
+      if (!service || !method) {
+        throw new Error("Service and method are required. Usage: seamflux service invoke <service> <method>");
       }
-      return await cmdServiceInvoke(client, node, method, {
+      return await cmdServiceInvoke(client, service, method, {
         params: v.param as string[] | undefined,
         body: v.body as string | undefined,
         file: v.file as string | undefined,
@@ -246,6 +329,41 @@ async function handleServiceCommand(
     }
     default:
       throw new Error(`Unknown service command: ${action || "(none)"}`);
+  }
+}
+
+async function handleScriptCommand(
+  action: string | undefined,
+  rest: string[],
+  v: Record<string, unknown>,
+  json: boolean
+): Promise<void> {
+  switch (action) {
+    case "download":
+      if (!v.slug) throw new Error("--slug is required");
+      return await cmdScriptDownload({
+        slug: v.slug as string,
+        output: v.output as string | undefined,
+        baseUrl: v.baseUrl as string | undefined,
+        json,
+      });
+    case "list":
+      return await cmdScriptList({
+        dir: v.dir as string | undefined,
+        json,
+      });
+    case "run": {
+      const slugOrPath = rest[0];
+      if (!slugOrPath) throw new Error("Usage: seamflux script run <slug|path> [--config <path>] [--key=value ...]");
+      return await cmdScriptRun({
+        slugOrPath,
+        config: v.config as string | undefined,
+        nodeArgs: rest.slice(1),
+        json,
+      });
+    }
+    default:
+      throw new Error(`Unknown script command: ${action || "(none)"}. Use: script download, script list, script run`);
   }
 }
 
