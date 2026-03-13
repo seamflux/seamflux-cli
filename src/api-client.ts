@@ -168,7 +168,7 @@ export class SeamFluxClient {
     return this.request("POST", "/api/service/invoke", {
       serviceName,
       methodName,
-      ...params,
+      params: params || {},
     });
   }
 
