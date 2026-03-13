@@ -85,7 +85,7 @@ export const CLI_OPTIONS = {
   method: { type: "string" },
 
   // Service options
-  param: { type: "string", multiple: true },
+  param: { type: "string", short: "p", multiple: true },
   body: { type: "string" },
   file: { type: "string" },
   stdin: { type: "boolean", default: false },
