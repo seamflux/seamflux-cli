@@ -68,15 +68,15 @@ These user requests should usually trigger this skill even if the user does not 
 |-------------|------------|
 | List or find workflows | `workflow list` (my workflows) or `workflow search --q "<query>"` (templates / search). Use search when the user describes a topic (e.g. "trading bot") and no ID is given. |
 | Get workflow details | `workflow get --id <id>`. If no ID: use `workflow list` or `workflow search --q "..."` first. |
-| Create workflow from description | `workflow generate --requirement "<user requirement>"`. Then suggest executing with `workflow execute --id <returned_id>`. |
+| Create workflow from description | `workflow generate --requirement "<detailed requirement>"` — Generates complex workflow orchestrations in SeamFlux Cloud. The requirement must be detailed: specify each step, services to call, trigger conditions, stop conditions, loops, or monitoring logic. For simple single-service calls, prefer `service invoke`. Then suggest executing with `workflow execute --id <returned_id>`. |
 | Run a workflow (cloud) | `workflow execute --id <id>` (optional: `--config '{"key":"value"}'`). Confirm workflow ID before running. After start, use `execution list` and `execution logs --id <exec_id>` to monitor. |
 | Download workflow script (local) | `script download --slug <slug>`. No API key. Saves to `~/.seamflux/scripts/<slug>/` (source.js + config.json). |
 | List downloaded scripts | `script list`. No API key. |
-| Run workflow script locally | `script run <slug>` or `script run <path>`. No API key. Use `--config <path>` to override config; pass `--key=value` for script args. Prefer this when the user wants to run locally or avoid cloud. |
+| Run workflow script locally | **Use background mode with log persistence.** `seamflux script run` may be long-running. Use the `process` tool in background mode, redirect logs to `logs/seamflux/<slug>.log`, and view logs with `read` or `grep`. Multiple scripts can run in parallel. Do NOT use `process poll`. |
 | List or inspect executions | `execution list`; for logs use `execution logs --id <id>`. |
 | Re-run an execution | `execution run --id <id> --config '{}'` (config required; use `{}` if no overrides). Confirm before running. |
-| Find a service / integration | `service query --query "<what user wants>"` (e.g. "send message", "okx order", "notion page"). Use `service list` to see all. If the user already named the service, narrow with `--service <name>`. |
-| Call a service method | `service invoke <serviceName> <method>` with params. Prefer `--param key=value` for simple args; use `--body '{"...":...}'` for nested JSON; use `--file <path>` for file input or `--stdin` when piping. Confirm service name, method, and params before invoking. |
+| Find a service / integration | **DO NOT GUESS service names.** First run `seamflux service list` to get all available services. Then use `service query --query "<what user wants>"` (e.g. "send message", "okx order", "notion page"). If the user already named the service, narrow with `--service <name>`. |
+| Call a service method | **DO NOT GUESS method names or parameters.** Before invoking, run `seamflux service query --query "<functional description>" --service <service>` to get the exact method name and required parameters. Then use `service invoke <serviceName> <method>` with params. Prefer `--param key=value` for simple args; use `--body '{"...":...}'` for nested JSON; use `--file <path>` for file input or `--stdin` when piping. Confirm service name, method, and params before invoking. |
 | Check connections | `connection list` or `connection list <credential-type>` to see connected accounts. When a service call needs a `credential` parameter, use the credential type to find saved connections first. |
 
 ## Default Operating Flow
@@ -84,6 +84,8 @@ These user requests should usually trigger this skill even if the user does not 
 1. **Credential check** — Run `seamflux config show` before any workflow/execution/service/connection command. If not configured, stop and guide to `seamflux config init`. **Omit for script** (download/list/run).
 2. **Identify intent** — Map the user's goal to one of: workflow (list/get/search/delete/execute/generate), execution (list/run/logs/delete), **script** (download/list/run — local, no API key), service (list/query/invoke), or connection (list).
 3. **Read first when ambiguous** — If the user did not give an ID or exact name, run a read or search (e.g. `workflow search`, `service query`) before any write.
+   - **For services**: Always run `seamflux service list` first to get all available service names. **NEVER guess service names** (e.g., don't assume "binance" exists without checking the list first).
+   - **For methods**: Always run `seamflux service query --query "<functional description>" --service <service>` first to get the exact method name and parameters. **NEVER guess method names or their parameters**.
 4. **Confirm before writes** — For delete, execute, run, or service invoke: confirm the target (workflow ID, execution ID, service+method+params) once with the user before executing.
 5. **Verify after writes** — After execute/run, suggest `execution list` and `execution logs --id <id>`. After delete, run the matching list to confirm.
 
@@ -96,10 +98,10 @@ These user requests should usually trigger this skill even if the user does not 
 
 ## Choosing Workflow vs Script vs Execution vs Service vs Connection
 
-- **Workflow** — Multi-step automation in the cloud. Use when the user talks about "workflow", "automation", "run my bot", or "create an automation that...". Use `workflow generate` when they describe a goal and no workflow exists yet. Use `workflow execute` to run in SeamFlux cloud sandbox.
-- **Script** — Local workflow script (download, list, run with Node.js). Use when they want to **download** a workflow script, **list** downloaded scripts, or **run a workflow locally** without API key. Prefer `script run <slug>` over `workflow execute` when they say "run locally", "run on my machine", or "without API".
+- **Workflow** — Multi-step automation in the cloud, including orchestrated tasks, loops, monitoring mechanisms, and conditional logic. Use when the user talks about "workflow", "automation", "run my bot", "monitor and alert", "when X happens do Y", or "create an automation that...". Use `workflow generate --requirement "..."` when they describe a multi-step goal and no workflow exists yet; the requirement must detail each step, services involved, trigger/stop conditions. Use `workflow execute` to run in SeamFlux cloud sandbox.
+- **Script** — Local workflow script (download, list, run with Node.js). Use when they want to **download** a workflow script, **list** downloaded scripts, or **run a workflow locally** without API key. Prefer `script run <slug>` over `workflow execute` when they say "run locally", "run on my machine", or "without API". Scripts may run for extended periods; always launch in background mode with persistent logging.
 - **Execution** — A single run of a workflow (cloud). Use when they ask about "last run", "logs", "re-run", or "execution".
-- **Service** — Single integration call (e.g. get price, send message). Use when they want one action from an app (Binance, Notion, Telegram, etc.) without a full workflow.
+- **Service** — Single integration call (e.g. get price, send message). Use when they want one action from an app (Binance, Notion, Telegram, etc.) without a full workflow. **Always run `service list` first to discover available services, and `service query` to get exact method names.**
 - **Connection** — Whether an integration is connected, and which saved credential to use. Use when they ask "is X connected?", "list my connections", or when a service method requires a `credential` parameter.
 
 ## Workflow Command Examples
@@ -136,10 +138,29 @@ seamflux workflow execute --id wf_abc123 --config '{"symbol":"BTC/USDT"}'
 
 ### Generate and Delete Workflow
 
-```bash
-# Generate a new workflow from natural-language requirement
-seamflux workflow generate --requirement "Daily fetch BTC price from Binance and send to Telegram"
+`workflow generate` creates complex workflow orchestrations in SeamFlux Cloud. Use for multi-step automations, loops, monitoring, and conditional logic. The `--requirement` parameter must be detailed and explicit:
 
+- **Each step** — What actions to perform and in what order
+- **Services to call** — Which integrations to use (check `service list` first)
+- **Trigger conditions** — When to start (e.g., "when BTC price > $90,000", "every 15 minutes")
+- **Stop conditions** — When to halt (e.g., "after 10 iterations", "when target reached")
+- **Data flow** — How data passes between steps
+
+**Example — Complex monitoring + trading workflow:**
+
+```bash
+# Monitor Binance BTC spot price and trade on OKX with notification
+seamflux workflow generate --requirement "Monitor Binance BTC spot 15-minute kline. When MA (moving average) is greater than 90000, place a market order on OKX to buy 0.01 BTC. After the order succeeds, send a notification via Telegram with order details. Repeat this monitoring loop until manually stopped."
+```
+
+This generates a cloud workflow that:
+1. Periodically fetches Binance BTC 15m kline data
+2. Calculates MA and checks if > 90000
+3. If triggered, invokes OKX service to place market buy order (0.01 BTC)
+4. On success, invokes Telegram service to send notification
+5. Continues monitoring (loop until stopped)
+
+```bash
 # Delete a workflow (confirm with user first)
 seamflux workflow delete --id wf_abc123
 ```
@@ -148,24 +169,64 @@ seamflux workflow delete --id wf_abc123
 
 Use **script** when the user wants to run a workflow locally or avoid using API credentials.
 
+### Download and List Scripts
+
 ```bash
 # Download a workflow script by slug (no API key)
 seamflux script download --slug my-workflow
 
 # List downloaded scripts
 seamflux script list
+```
 
-# Run a downloaded script (uses config.json in script dir)
-seamflux script run my-workflow
+### Run Scripts (Background Mode Required)
 
-# Run with custom config file
-seamflux script run my-workflow --config ./prod.json
+`seamflux script run` may execute long-running automation tasks (monitoring, trading bots, loops). **Always use the `process` tool in background mode** and persist logs to disk. Do NOT use `process poll`.
 
-# Run with inline args passed to the script
-seamflux script run my-workflow --symbol=BTCUSDT --interval=1m
+**Log file location:** `logs/seamflux/<slug>.log` (create the directory if needed)
+
+```bash
+# Step 1: Create logs directory
+mkdir -p logs/seamflux
+
+# Step 2: Run script in background with log redirection (via process tool)
+# The process tool launches: seamflux script run my-workflow > logs/seamflux/my-workflow.log 2>&1
+
+# Step 3: View logs in real-time
+read logs/seamflux/my-workflow.log
+
+# Step 4: Search for specific events in logs
+grep "ERROR" logs/seamflux/my-workflow.log
+grep "order placed" logs/seamflux/my-workflow.log
+```
+
+**Running Multiple Scripts in Parallel:**
+
+Multiple scripts can run simultaneously. Each gets its own log file:
+
+```bash
+# Background process 1: Trading bot for BTC
+seamflux script run trading-bot-btc > logs/seamflux/trading-bot-btc.log 2>&1 &
+
+# Background process 2: Trading bot for ETH
+seamflux script run trading-bot-eth > logs/seamflux/trading-bot-eth.log 2>&1 &
+
+# Background process 3: Price monitor
+seamflux script run price-monitor > logs/seamflux/price-monitor.log 2>&1 &
+```
+
+**Run with custom config or inline args:**
+
+```bash
+# Run with custom config file (background mode)
+seamflux script run my-workflow --config ./prod.json > logs/seamflux/my-workflow.log 2>&1 &
+
+# Run with inline args passed to the script (background mode)
+seamflux script run my-workflow --symbol=BTCUSDT --interval=1m > logs/seamflux/my-workflow.log 2>&1 &
 ```
 
 - **Cloud vs local:** `workflow execute --id <id>` runs in SeamFlux cloud; `script run <slug>` runs the same workflow locally with Node.js.
+- **Background execution:** Scripts run indefinitely until stopped or encountering an error. Use `process` tool's terminate capability to stop a running script when needed.
 
 ## Execution Command Examples
 
@@ -217,8 +278,10 @@ seamflux execution logs --id exec_xyz789
 
 ### Discover Services
 
+**Rule: Never guess service names. Always use `service list` to get available services first.**
+
 ```bash
-# List all available services
+# Step 1: List all available services (NEVER guess service names)
 seamflux service list
 
 # Search by description (semantic search)
@@ -233,8 +296,13 @@ seamflux service query --query "weather" --json
 
 ### Invoke Services
 
+**Rule: Never guess method names or parameters. Always use `service query --query "..." --service <service>` first.**
+
 ```bash
-# Simple parameters (--param key=value)
+# Step 1: Query to get exact method name and parameters
+seamflux service query --query "get ticker price" --service binance
+
+# Step 2: Invoke with the exact method name from query results
 seamflux service invoke binance getTicker --param symbol=BTC/USDT
 
 # Multiple parameters
@@ -298,6 +366,8 @@ Use this to narrow which services to look for before calling `service query --qu
 ## Parameter and Communication Guidelines
 
 - **Talk in natural language** — Ask "What's the workflow ID?" or "What do you want to search for?" rather than "Enter --id" or "Enter --q". If the user already gave values, use them; do not re-ask.
+- **Service names** — **DO NOT GUESS.** Always run `seamflux service list` first to get the actual available service names.
+- **Method names and parameters** — **DO NOT GUESS.** Always run `seamflux service query --query "<functional description>" --service <service>` first to get exact method names and required parameters.
 - **Service invoke parameters** — Use `--param key=value` for simple types; use `--body '{"key":...}'` for nested objects/arrays (single-quote JSON in shell). For large payloads use `--file <path>` or `--stdin` when piping. Priority: stdin > file > body > params.
 - **Prefer `--json` when chaining steps** — If the next step depends on parsing results, filtering matches, or selecting IDs/methods, prefer JSON output over prose tables.
 - **Credential-backed service calls** — If the service parameters include `credential`, first run `seamflux connection list <type>` to inspect the user's saved credentials in SeamFlux app. If exactly one matching connection exists, use its `name` as `credential`. If multiple exist, ask the user which one to use. Pass it as `credential: "<name>"` in the invoke payload.
@@ -318,9 +388,12 @@ Global options: `--json` for JSON output; `--api-key`, `--base-url` to override 
 ## High-Value Flows
 
 - **Execute and monitor (cloud)** — `workflow search --q "..."` or `workflow list` → choose ID → `workflow execute --id <id>` → `execution list` → `execution logs --id <exec_id>`.
-- **Run workflow locally** — `script download --slug <slug>` → `script run <slug>`. Use when the user wants to run without API or in a local environment.
-- **Generate and run** — `workflow generate --requirement "..."` → then `workflow execute --id <id>` and monitor with execution logs.
-- **One-off integration call** — `service query --query "..."` → `service invoke <service> <method>` with appropriate params. For targeted searches, use `service query --query "get price" --service binance` to search only within a specific service.
+- **Run workflow locally** — `script download --slug <slug>` → create `logs/seamflux/` directory → run `seamflux script run <slug>` via `process` tool in background mode with log redirection to `logs/seamflux/<slug>.log` → use `read` or `grep` to monitor logs. Do NOT use `process poll`. Multiple scripts can run in parallel.
+- **Generate and run** — `workflow generate --requirement "<detailed requirement>"` → then `workflow execute --id <id>` and monitor with execution logs. The requirement must explicitly describe: each step, services to call, trigger conditions (when to start/act), stop conditions, and any loops or monitoring logic.
+- **One-off integration call** — 
+  1. `seamflux service list` to get available services (**don't guess**)
+  2. `seamflux service query --query "..." --service <service>` to get exact method name and parameters (**don't guess**)
+  3. `seamflux service invoke <service> <method>` with appropriate params
 - **Cross-service outcome** — If the user says something like "place an order on OKX and save to Notion", first use the Service Capability Guide to identify likely services, then use `service query` to confirm exact service/methods, and only then decide whether this should stay a direct service call or become a generated workflow.
 - **Credential-backed service call** — If the params require `credential`, run `connection list <type>` first → if one match exists, use its name directly → if multiple matches exist, ask the user to choose → invoke with `credential: "<name>"`. Example: `connection list telegram` returns "My Bot", then `service invoke telegram sendMessage --param credential="My Bot" --param text="Hello"`.
 - **Check connection** — `connection list` or `connection list <type>` before assuming an integration is available.
@@ -333,8 +406,10 @@ Global options: `--json` for JSON output; `--api-key`, `--base-url` to override 
 
 - **Workflow not found** — Resolve ID via `workflow list` or `workflow search --q "..."`.
 - **Script not found (run)** — If `script run <slug>` fails with "Script not found", run `script download --slug <slug>` first. Scripts live under `~/.seamflux/scripts/<slug>/`.
+- **Long-running scripts** — Always launch via `process` tool in background mode with log redirection to `logs/seamflux/<slug>.log`. Use `read` or `grep` to inspect logs. Do NOT use `process poll`.
+- **Parallel script execution** — Multiple scripts can run simultaneously. Each script should have its own log file (e.g., `logs/seamflux/script-a.log`, `logs/seamflux/script-b.log`).
 - **Draft workflow** — Only active workflows can be executed; inform the user if status is draft.
 - **Execution run** — Requires `--config`; use `'{}'` if no overrides.
-- **Service invoke** — Use `service query` to get correct service/method names. Prefer `--param` for flat arguments and `--body` for nested JSON.
+- **Service invoke** — **DO NOT GUESS.** Use `seamflux service list` to get service names, then `seamflux service query --query "<functional description>" --service <service>` to get exact method names and parameters. Prefer `--param` for flat arguments and `--body` for nested JSON.
 - **Credential selection** — If a required `credential` field maps to multiple saved connections of the same type, do not guess; ask the user which connection name to use.
 - **No credentials** — Always run `config show` first; on failure, guide to `config init` and stop until configured.
