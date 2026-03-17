@@ -227,6 +227,10 @@ seamflux config show
 seamflux config set default_profile prod
 seamflux config use prod
 ```
+## Agent install
+
+ curl -fsSL https://raw.githubusercontent.com/seamflux/seamflux-cli/main
+  /install.sh | bash
 
 ## Requirements
 
