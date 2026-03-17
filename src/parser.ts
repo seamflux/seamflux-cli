@@ -36,7 +36,8 @@ export interface CliValues {
   file?: string;
   stdin?: boolean;
   interactive?: boolean;
-  service?: string;
+  useLog?: string;
+  map?: string[];
 
   // Config options
   force?: boolean;
@@ -44,6 +45,9 @@ export interface CliValues {
 
   // Workflow generate options
   requirement?: string;
+
+  // Signer options
+  name?: string;
 
   // Script options
   output?: string;
@@ -90,6 +94,8 @@ export const CLI_OPTIONS = {
   file: { type: "string" },
   stdin: { type: "boolean", default: false },
   interactive: { type: "boolean", short: "i", default: false },
+  "use-log": { type: "string" },
+  map: { type: "string", multiple: true },
 
   // Config options
   force: { type: "boolean", default: false },
@@ -97,6 +103,9 @@ export const CLI_OPTIONS = {
 
   // Workflow generate options
   requirement: { type: "string" },
+
+  // Signer options
+  name: { type: "string" },
 
   // Script options
   output: { type: "string" },
@@ -145,6 +154,10 @@ export function parseCli(argv: string[]): { values: CliValues; positionals: stri
   if (values["related-to"]) {
     mappedValues.relatedTo = values["related-to"] as string;
     delete (mappedValues as Record<string, unknown>)["related-to"];
+  }
+  if (values["use-log"]) {
+    mappedValues.useLog = values["use-log"] as string;
+    delete (mappedValues as Record<string, unknown>)["use-log"];
   }
 
 

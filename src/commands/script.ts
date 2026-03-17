@@ -1,12 +1,14 @@
 import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
+import { createWriteStream } from "node:fs";
+import { Readable } from "node:stream";
 import extract from "extract-zip";
-import { getConfigDir } from "../config/toml.js";
+import { getConfigDir, getScriptLogDir } from "../config/toml.js";
 import { printError, printJson, printSuccess, printTable } from "../formatter.js";
 
 const DEFAULT_DOWNLOAD_BASE = "https://app.seamflux.ai";
-const SCRIPT_ENTRY = "source.js";
+const SCRIPT_ENTRY = "cli.js";
 
 export function getScriptsDir(): string {
   return `${getConfigDir()}/scripts`;
@@ -106,7 +108,7 @@ export async function cmdScriptList(opts: {
       await stat(sourcePath);
       scripts.push({ slug: name, path: full });
     } catch {
-      // skip non-directories or dirs without source.js
+      // skip non-directories or dirs without cli.js
     }
   }
 
@@ -160,6 +162,18 @@ export async function cmdScriptRun(opts: {
     return;
   }
 
+  // Prepare log file path
+  const slug = isPath ? scriptDir.split(/[/\\]/).pop() || "unknown" : opts.slugOrPath;
+  const logDir = getScriptLogDir();
+  const logPath = join(logDir, `${slug}.log`);
+
+  // Ensure log directory exists
+  try {
+    await mkdir(logDir, { recursive: true });
+  } catch {
+    // ignore
+  }
+
   const args: string[] = [sourcePath];
   if (opts.config) {
     args.push(`--config=${opts.config}`);
@@ -170,16 +184,55 @@ export async function cmdScriptRun(opts: {
 
   const child = spawn(process.execPath, args, {
     cwd: scriptDir,
-    stdio: "inherit",
+    stdio: ["inherit", "pipe", "pipe"],
     env: process.env,
+  });
+
+  // Create log write stream
+  const logStream = createWriteStream(logPath, { flags: "a" });
+  const startTime = new Date().toISOString();
+  logStream.write(`\n=== Script Run: ${slug} ===\n`);
+  logStream.write(`Started at: ${startTime}\n`);
+  logStream.write(`Command: node ${args.join(" ")}\n`);
+  logStream.write("---\n");
+
+  // Helper to write to both stdout/stderr and log
+  const writeToLog = (data: Buffer, isError: boolean) => {
+    const output = data.toString();
+    if (isError) {
+      process.stderr.write(output);
+    } else {
+      process.stdout.write(output);
+    }
+    logStream.write(output);
+  };
+
+  // Pipe stdout to console and log
+  child.stdout?.on("data", (data: Buffer) => {
+    writeToLog(data, false);
+  });
+
+  // Pipe stderr to console and log
+  child.stderr?.on("data", (data: Buffer) => {
+    writeToLog(data, true);
   });
 
   child.on("error", (err) => {
     printError(err.message);
+    logStream.write(`\n[ERROR] ${err.message}\n`);
+    logStream.end();
     process.exitCode = 1;
   });
 
   child.on("exit", (code, signal) => {
+    const endTime = new Date().toISOString();
+    logStream.write(`\n---\n`);
+    logStream.write(`Exit code: ${code ?? "null"}\n`);
+    logStream.write(`Signal: ${signal ?? "none"}\n`);
+    logStream.write(`Finished at: ${endTime}\n`);
+    logStream.write(`=== End of Script Run: ${slug} ===\n\n`);
+    logStream.end();
+
     if (code != null) process.exitCode = code;
     if (signal) process.exitCode = 1;
   });

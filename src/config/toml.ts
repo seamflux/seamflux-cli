@@ -7,9 +7,16 @@ export interface SeamFluxProfile {
   base_url?: string;
 }
 
+export interface SignerConfig {
+  signerId: string;
+  name: string;
+}
+
 export interface SeamFluxTomlConfig {
   default_profile?: string;
   profiles: Record<string, SeamFluxProfile>;
+  signers?: Record<string, SignerConfig>;
+  wallets?: Record<string, string>; // address -> walletId
 }
 
 const DEFAULT_CONFIG: SeamFluxTomlConfig = {
@@ -29,6 +36,18 @@ export function getConfigPath(): string {
   return `${getConfigDir()}/config.toml`;
 }
 
+export function getLogDir(): string {
+  return `${getConfigDir()}/logs`;
+}
+
+export function getScriptLogDir(): string {
+  return `${getLogDir()}/script`;
+}
+
+export function getServiceInvokeLogDir(): string {
+  return `${getLogDir()}/service-invoke`;
+}
+
 export async function readConfig(): Promise<SeamFluxTomlConfig> {
   try {
     const content = await readFile(getConfigPath(), "utf-8");
@@ -36,6 +55,8 @@ export async function readConfig(): Promise<SeamFluxTomlConfig> {
     return {
       default_profile: parsed.default_profile || "default",
       profiles: parsed.profiles || {},
+      signers: parsed.signers || {},
+      wallets: parsed.wallets || {},
     };
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {

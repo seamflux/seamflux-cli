@@ -1,4 +1,6 @@
 import type { SeamFluxConfig } from "./config/loader.js";
+import type { SignerConfig } from "./config/toml.js";
+import { saveSignerConfig, getWalletId, saveWalletMapping, listSignerConfigs } from "./config/loader.js";
 
 export interface ApiResponse<T = unknown> {
   code: number;
@@ -55,7 +57,7 @@ export class SeamFluxClient {
       body: body ? JSON.stringify(body) : undefined,
     });
 
-    const data = await response.json().catch(() => null);
+    const data = await response.json().catch(() => null) as { message?: string; code?: number; data?: T } | null;
 
     if (!response.ok) {
       throw new ApiError(
@@ -177,5 +179,47 @@ export class SeamFluxClient {
     return this.request("GET", "/api/connections", undefined, {
       credentialType,
     });
+  }
+
+  // Signer APIs
+  async registerSigner(data: { name: string; publicKey: string }): Promise<ApiResponse<{ signerId: string }>> {
+    return this.request("POST", "/api/signers", {
+      name: data.name,
+      publicKeyHex: data.publicKey,
+    });
+  }
+
+  async requestWalletId(address: string): Promise<ApiResponse<{ walletId: string }>> {
+    const response = await this.request<{ walletId: string }>("GET", "/api/wallets/getId", undefined, { address });
+    
+    // 校验 walletId 格式
+    const walletId = response.data?.walletId;
+    if (walletId !== undefined && (typeof walletId !== 'string' || walletId.length === 0)) {
+      throw new ApiError(
+        `Invalid walletId format received from API for address: ${address}`,
+        200,
+        -1
+      );
+    }
+    
+    return response;
+  }
+
+  // Local config methods for signers
+  async saveSignerConfig(name: string, config: SignerConfig): Promise<void> {
+    return saveSignerConfig(name, config);
+  }
+
+  async listSigners(): Promise<SignerConfig[]> {
+    return listSignerConfigs();
+  }
+
+  // Local config methods for wallets
+  async getWalletId(address: string): Promise<string | undefined> {
+    return getWalletId(address);
+  }
+
+  async saveWalletMapping(address: string, walletId: string): Promise<void> {
+    return saveWalletMapping(address, walletId);
   }
 }

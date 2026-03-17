@@ -40,16 +40,15 @@ npx skills add seamflux/seamflux-cli
    seamflux workflow execute --id <workflow-id>
    ```
 
-4. **Invoke a service directly:**
+4. **Invoke a service:**
    ```bash
-   seamflux binance getTicker -p symbol=BTC/USDT
+   seamflux service invoke binance getTicker -p symbol=BTC/USDT
    ```
 
 ## Usage
 
 ```
 seamflux [options] <module> <command> [args...]
-seamflux [options] <service> [method] [args...]
 ```
 
 ### Global Options
@@ -95,7 +94,7 @@ Download workflow scripts and run them locally with Node.js. Does not require AP
 
 | Command | Description |
 |---------|-------------|
-| `seamflux script download --slug <slug> [--output <dir>]` | Download workflow script package (source.js + config.json) by slug |
+| `seamflux script download --slug <slug> [--output <dir>]` | Download workflow script package (cli.js + workflow.code.js + config.json) by slug |
 | `seamflux script list [--dir <dir>]` | List downloaded scripts |
 | `seamflux script run <slug\|path> [--config <path>] [--key=value ...]` | Run a downloaded script locally; script auto-loads config.json or use `--config`; extra args passed to the script |
 
@@ -110,14 +109,7 @@ Discover and invoke services.
 |---------|-------------|
 | `seamflux service list` | List all available services |
 | `seamflux service query --query <query> [--service <name>] [--k <n>]` | Search services by description |
-| `seamflux service invoke <node> <method> [options]` | Invoke a service method |
-
-**Service Shortcut** (more convenient):
-
-| Command | Description |
-|---------|-------------|
-| `seamflux <service>` | List all methods of a service |
-| `seamflux <service> <method> [options]` | Invoke a service method directly |
+| `seamflux service invoke <service> <method> [options]` | Invoke a service method |
 
 ### Connection Management
 
@@ -139,25 +131,6 @@ Manage CLI configuration.
 | `seamflux config use <profile-name>` | Switch to a profile |
 
 ## Service Invocation
-
-### Shortcut Syntax (Recommended)
-
-```bash
-# List all methods of a service
-seamflux binance
-
-# Invoke with simple parameters
-seamflux binance getTicker -p symbol=BTC/USDT -p limit=100
-
-# Invoke with JSON body
-seamflux notion createPage --body '{"parent":{"page_id":"xxx"}}'
-
-# Invoke with parameters from file
-seamflux openai chat -f ./chat-config.json
-
-# Invoke with stdin
- cat params.json | seamflux webhook trigger --stdin
-```
 
 ### Standard Syntax
 
@@ -239,12 +212,7 @@ seamflux script list
 seamflux script run my-workflow
 seamflux script run my-workflow --config ./prod.json --symbol=BTCUSDT
 
-# Service invocation (shortcut)
-seamflux binance                          # list binance methods
-seamflux binance getTicker -p symbol=BTC/USDT
-seamflux openai chat -p model=gpt-4 -p message="Hello"
-
-# Service invocation (standard)
+# Service invocation
 seamflux service list
 seamflux service query --query "send email"
 seamflux service invoke binance getTicker -p symbol=BTC/USDT

@@ -76,4 +76,44 @@ export async function setDefaultProfile(name: string): Promise<void> {
   await writeConfig(config);
 }
 
+// Signer config management
+export async function saveSignerConfig(name: string, signerConfig: import("./toml.js").SignerConfig): Promise<void> {
+  const { readConfig, writeConfig } = await import("./toml.js");
+  const config = await readConfig();
+  if (!config.signers) {
+    config.signers = {};
+  }
+  config.signers[name] = signerConfig;
+  await writeConfig(config);
+}
+
+export async function getSignerConfig(name: string): Promise<import("./toml.js").SignerConfig | undefined> {
+  const { readConfig } = await import("./toml.js");
+  const config = await readConfig();
+  return config.signers?.[name];
+}
+
+export async function listSignerConfigs(): Promise<import("./toml.js").SignerConfig[]> {
+  const { readConfig } = await import("./toml.js");
+  const config = await readConfig();
+  return config.signers ? Object.values(config.signers) : [];
+}
+
+// Wallet mapping management
+export async function saveWalletMapping(address: string, walletId: string): Promise<void> {
+  const { readConfig, writeConfig } = await import("./toml.js");
+  const config = await readConfig();
+  if (!config.wallets) {
+    config.wallets = {};
+  }
+  config.wallets[address] = walletId;
+  await writeConfig(config);
+}
+
+export async function getWalletId(address: string): Promise<string | undefined> {
+  const { readConfig } = await import("./toml.js");
+  const config = await readConfig();
+  return config.wallets?.[address];
+}
+
 export { getConfigPath, type SeamFluxTomlConfig, type SeamFluxProfile };

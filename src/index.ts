@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// Global definition for build-time constant
+declare const __GIT_HASH__: string;
+
 import { createRequire } from "node:module";
 import { parseCli } from "./parser.js";
 import { printHelp } from "./help.js";
@@ -39,6 +42,11 @@ import {
   cmdScriptList,
   cmdScriptRun,
 } from "./commands/script.js";
+import {
+  cmdSignerCreate,
+  cmdSignerList,
+  cmdSignerSign,
+} from "./commands/signer.js";
 
 const _require = createRequire(import.meta.url);
 const CLI_VERSION = (_require("../package.json") as { version: string }).version;
@@ -47,7 +55,7 @@ const GIT_HASH: string = typeof __GIT_HASH__ !== "undefined" ? __GIT_HASH__ : "d
 export { printHelp };
 
 // Known top-level modules (for routing service shortcuts)
-const KNOWN_MODULES = new Set(["config", "script", "workflow", "execution", "service", "connection"]);
+const KNOWN_MODULES = new Set(["config", "script", "workflow", "execution", "service", "connection", "signer"]);
 
 // ---------------------------------------------------------------------------
 // Main entry point
@@ -73,63 +81,10 @@ async function main(): Promise<void> {
   const v = values;
   const json = v.json ?? false;
 
-  // Service shortcut: seamflux <service> [method] [options]
-  // If first positional is not a known module, treat it as a service name
+  // Validate module
   if (!KNOWN_MODULES.has(module)) {
-    const serviceName = module;
-    const methodName = action;
-    
-    // Initialize API client
-    const loadOptions: LoadConfigOptions = {
-      profile: v.profile,
-      apiKey: v.apiKey,
-      baseUrl: v.baseUrl,
-    };
-
-    let client: SeamFluxClient;
-    try {
-      const config = await loadConfig(loadOptions);
-      client = new SeamFluxClient(config);
-    } catch (err) {
-      if (err instanceof Error) {
-        printError(err.message);
-      } else {
-        printError("Failed to load configuration");
-      }
-      return;
-    }
-
-    try {
-      if (methodName) {
-        // seamflux <service> <method> [options] -> invoke service method
-        return await cmdServiceInvoke(client, serviceName, methodName, {
-          params: v.param as string[] | undefined,
-          body: v.body as string | undefined,
-          file: v.file as string | undefined,
-          stdin: v.stdin as boolean,
-          json,
-        });
-      } else {
-        // seamflux <service> -> query service methods
-        return await cmdServiceQuery(client, {
-          query: "*",
-          service: serviceName,
-          json,
-        });
-      }
-    } catch (err) {
-      if (err instanceof ApiError) {
-        printError(`${err.message} (code: ${err.code})`);
-        if (err.traceId) {
-          process.stderr.write(`  Trace ID: ${err.traceId}\n`);
-        }
-      } else if (err instanceof Error) {
-        printError(err.message);
-      } else {
-        printError("An unknown error occurred");
-      }
-      process.exitCode = 1;
-    }
+    printError(`Unknown module: ${module}. Available: ${Array.from(KNOWN_MODULES).join(", ")}`);
+    process.exitCode = 1;
     return;
   }
 
@@ -196,6 +151,8 @@ async function main(): Promise<void> {
         return await handleServiceCommand(client, action, rest, v, json);
       case "connection":
         return await handleConnectionCommand(client, action, rest, v, json);
+      case "signer":
+        return await handleSignerCommand(client, action, rest, v, json);
       default:
         printError(`Unknown module: ${module}`);
         process.exitCode = 1;
@@ -319,11 +276,24 @@ async function handleServiceCommand(
       if (!service || !method) {
         throw new Error("Service and method are required. Usage: seamflux service invoke <service> <method>");
       }
+      
+      // Parse --use-log argument (format: --use-log service method)
+      let useLog: { service: string; method: string } | undefined;
+      if (v.useLog) {
+        const useLogParts = (v.useLog as string).split(" ");
+        if (useLogParts.length !== 2) {
+          throw new Error("Invalid --use-log format. Expected: --use-log <service> <method>");
+        }
+        useLog = { service: useLogParts[0], method: useLogParts[1] };
+      }
+      
       return await cmdServiceInvoke(client, service, method, {
         params: v.param as string[] | undefined,
         body: v.body as string | undefined,
         file: v.file as string | undefined,
         stdin: v.stdin as boolean,
+        useLog,
+        map: v.map as string[] | undefined,
         json,
       });
     }
@@ -381,6 +351,52 @@ async function handleConnectionCommand(
   }
 
   throw new Error(`Unknown connection command: ${action || "(none)"}. Usage: seamflux connection list [credential-type]`);
+}
+
+async function handleSignerCommand(
+  client: SeamFluxClient,
+  action: string | undefined,
+  rest: string[],
+  v: Record<string, unknown>,
+  json: boolean
+): Promise<void> {
+  switch (action) {
+    case "create": {
+      const name = (v.name as string | undefined) || rest[0];
+      return await cmdSignerCreate(client, { name });
+    }
+    case "list":
+      return await cmdSignerList(client, { json });
+    case "sign": {
+      const walletAddress = rest[0];
+      const transaction = rest[1];
+      if (!walletAddress) {
+        throw new Error("Usage: seamflux signer sign <walletAddress> [transaction] [options]");
+      }
+      
+      // Parse --use-log argument (format: --use-log service method)
+      let useLog: { service: string; method: string } | undefined;
+      if (v.useLog) {
+        const useLogParts = (v.useLog as string).split(" ");
+        if (useLogParts.length !== 2) {
+          throw new Error("Invalid --use-log format. Expected: --use-log <service> <method>");
+        }
+        useLog = { service: useLogParts[0], method: useLogParts[1] };
+      }
+      
+      return await cmdSignerSign(client, walletAddress, transaction, {
+        name: v.name as string | undefined,
+        params: v.param as string[] | undefined,
+        body: v.body as string | undefined,
+        file: v.file as string | undefined,
+        stdin: v.stdin as boolean,
+        useLog,
+        map: v.map as string[] | undefined,
+      });
+    }
+    default:
+      throw new Error(`Unknown signer command: ${action || "(none)"}. Usage: seamflux signer <create|list|sign>`);
+  }
 }
 
 // Run main

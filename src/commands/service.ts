@@ -1,6 +1,8 @@
-import { readFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { stdin } from "node:process";
 import type { SeamFluxClient } from "../api-client.js";
+import { getServiceInvokeLogDir } from "../config/toml.js";
 import { printJson, printTable, printKv, printSuccess, printError } from "../formatter.js";
 
 interface InvokeOptions {
@@ -9,6 +11,8 @@ interface InvokeOptions {
   file?: string;
   stdin?: boolean;
   json: boolean;
+  useLog?: { service: string; method: string };
+  map?: string[];
 }
 
 export async function cmdServiceList(
@@ -82,21 +86,53 @@ export async function cmdServiceInvoke(
   const payload = await resolvePayload(opts);
   const result = await client.invokeService(service, method, payload);
 
-  if (opts.json) {
-    printJson(result.data);
-    return;
+  // Output raw JSON for piping (compact format, no indentation)
+  const data = result.data ?? null;
+  process.stdout.write(JSON.stringify(data) + "\n");
+
+  // Log to file
+  await logServiceInvoke(service, method, result);
+}
+
+/**
+ * Log service invoke result to file
+ */
+async function logServiceInvoke(
+  service: string,
+  method: string,
+  result: { code?: number; message?: string; data?: unknown }
+): Promise<void> {
+  const logDir = getServiceInvokeLogDir();
+  
+  // Ensure log directory exists
+  try {
+    await mkdir(logDir, { recursive: true });
+  } catch {
+    // ignore
   }
 
-  if (result.data && typeof result.data === "object") {
-    printKv(result.data as Record<string, unknown>);
-  } else {
-    process.stdout.write(String(result.data ?? "(no data)") + "\n");
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const logFile = join(logDir, `${service}-${method}.log`);
+
+  const logEntry = {
+    createdAt: new Date().toISOString(),
+    service,
+    method,
+    result,
+  };
+
+  // Append to log file with newline separator
+  const logLine = JSON.stringify(logEntry) + "\n";
+  try {
+    await writeFile(logFile, logLine, { flag: "a" });
+  } catch {
+    // Silently ignore log write errors to not disrupt user workflow
   }
 }
 
 /**
  * Resolve payload from various input sources
- * Priority: stdin > file > body > params
+ * Priority: stdin > file > body > useLog+map > params
  */
 async function resolvePayload(opts: InvokeOptions): Promise<Record<string, unknown>> {
   // 1. Stdin mode (highest priority)
@@ -134,7 +170,38 @@ async function resolvePayload(opts: InvokeOptions): Promise<Record<string, unkno
     }
   }
 
-  // 4. Params mode (key=value pairs, lowest priority)
+  // 4. UseLog + Map mode: Read from previous service invoke log
+  if (opts.useLog) {
+    const logData = await readLatestLog(opts.useLog.service, opts.useLog.method);
+    
+    if (opts.map && opts.map.length > 0) {
+      // Map specific fields from log to payload
+      const payload: Record<string, unknown> = {};
+      for (const mapping of opts.map) {
+        const eqIdx = mapping.indexOf("=");
+        if (eqIdx === -1) {
+          throw new Error(`Invalid map format: ${mapping}. Expected: source_field=target_param`);
+        }
+        const sourceField = mapping.slice(0, eqIdx);
+        const targetParam = mapping.slice(eqIdx + 1);
+        const value = getNestedValue(logData, sourceField);
+        if (value === undefined) {
+          const availableFields = listAvailableFields(logData);
+          throw new Error(
+            `Field "${sourceField}" not found in log. Available fields: ${availableFields.join(", ")}`
+          );
+        }
+        payload[targetParam] = value;
+      }
+      return payload;
+    }
+    
+    // If no map specified, use the entire log data.result.data as payload
+    const resultData = (logData.result as Record<string, unknown> | undefined)?.data;
+    return (resultData as Record<string, unknown>) || {};
+  }
+
+  // 5. Params mode (key=value pairs, lowest priority)
   if (opts.params && opts.params.length > 0) {
     const payload: Record<string, unknown> = {};
     for (const p of opts.params) {
@@ -151,6 +218,78 @@ async function resolvePayload(opts: InvokeOptions): Promise<Record<string, unkno
 
   // Empty payload
   return {};
+}
+
+/**
+ * Read the latest log entry from service invoke log file
+ */
+async function readLatestLog(
+  service: string,
+  method: string
+): Promise<Record<string, unknown>> {
+  const logDir = getServiceInvokeLogDir();
+  const logFile = join(logDir, `${service}-${method}.log`);
+
+  try {
+    const content = await readFile(logFile, "utf-8");
+    const lines = content.trim().split("\n").filter(Boolean);
+    
+    if (lines.length === 0) {
+      throw new Error(`No log entries found for ${service}.${method}`);
+    }
+
+    // Get the last (latest) entry
+    const latestLine = lines[lines.length - 1];
+    return JSON.parse(latestLine);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new Error(
+        `Log file not found for ${service}.${method}. Run "seamflux service invoke ${service} ${method}" first.`
+      );
+    }
+    if (err instanceof Error && err.message.startsWith("No log entries")) {
+      throw err;
+    }
+    throw new Error(`Failed to read log for ${service}.${method}: ${(err as Error).message}`);
+  }
+}
+
+/**
+ * Get nested value from object using dot notation (e.g., "result.data.price")
+ */
+function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+  const keys = path.split(".");
+  let current: unknown = obj;
+
+  for (const key of keys) {
+    if (current === null || current === undefined) {
+      return undefined;
+    }
+    if (typeof current !== "object") {
+      return undefined;
+    }
+    current = (current as Record<string, unknown>)[key];
+  }
+
+  return current;
+}
+
+/**
+ * List available fields from log data for error messages
+ */
+function listAvailableFields(obj: Record<string, unknown>, prefix = ""): string[] {
+  const fields: string[] = [];
+
+  for (const [key, value] of Object.entries(obj)) {
+    const fullKey = prefix ? `${prefix}.${key}` : key;
+    if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+      fields.push(...listAvailableFields(value as Record<string, unknown>, fullKey));
+    } else {
+      fields.push(fullKey);
+    }
+  }
+
+  return fields.slice(0, 10); // Limit to first 10 fields
 }
 
 /**

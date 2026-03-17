@@ -83,10 +83,12 @@ const HELP_TREE: HelpTree = {
           "seamflux service invoke <service> <method> [options]\n" +
           "    Shortcut: seamflux <service> <method> [options]\n" +
           "    Options:\n" +
-          "      -p, --param <k=v>    Simple parameters (AI-friendly)\n" +
-          "      -b, --body '<json>'  JSON request body\n" +
-          "      -f, --file <path>    Read params from JSON file\n" +
-          "      --stdin              Read params from STDIN (pipe)",
+          "      -p, --param <k=v>         Simple parameters (AI-friendly)\n" +
+          "      -b, --body '<json>'       JSON request body\n" +
+          "      -f, --file <path>         Read params from JSON file\n" +
+          "      --stdin                   Read params from STDIN (pipe)\n" +
+          "      --use-log <svc> <method>  Use previous invoke result from log\n" +
+          "      --map <src>=<dst>         Map log field to parameter (use with --use-log)",
         description: "Invoke a service method",
       },
     },
@@ -140,6 +142,33 @@ const HELP_TREE: HelpTree = {
       list: {
         usage: "seamflux connection list [credential-type]",
         description: "List all connections, or show details for a specific credential type",
+      },
+    },
+  },
+
+  signer: {
+    description: "Manage signing keys and sign transactions",
+    commands: {
+      create: {
+        usage: "seamflux signer create [name]",
+        description: "Create a new signing key pair and register to server (default name: openclaw)",
+      },
+      list: {
+        usage: "seamflux signer list",
+        description: "List all configured signers",
+      },
+      sign: {
+        usage:
+          "seamflux signer sign <walletAddress> [transaction] [options]\n" +
+          "    Options:\n" +
+          "      --name <name>             Signer name (default: openclaw)\n" +
+          "      -b, --body '<json>'       Transaction JSON string\n" +
+          "      -f, --file <path>         Read transaction from JSON file\n" +
+          "      -p, --param <k=v>         Transaction parameters\n" +
+          "      --stdin                   Read transaction from STDIN\n" +
+          "      --use-log <svc> <method>  Build tx from previous service call log\n" +
+          "      --map <src>=<dst>         Map log field to tx field (use with --use-log)",
+        description: "Sign a transaction using the specified signer",
       },
     },
   },

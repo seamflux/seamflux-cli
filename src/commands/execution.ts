@@ -107,7 +107,8 @@ export async function cmdExecutionLogs(
       ? new Date(Number(ts) || String(ts)).toLocaleTimeString()
       : "-";
 
-    process.stdout.write(`[${timeStr}] ${level.padEnd(5)} ${node ? `(${node}) ` : ""}${message}\n`);
+    const levelStr = String(level);
+    process.stdout.write(`[${timeStr}] ${levelStr.padEnd(5)} ${node ? `(${node}) ` : ""}${message}\n`);
   }
 
   if (opts.id) {
